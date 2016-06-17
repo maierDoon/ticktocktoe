@@ -1,89 +1,98 @@
 package ticktocktoe
 
+object Imports {
+  type Coord = (Int, Int)
+}
+
+import Imports._
+
 /**
   * Created by Maier Lasdun on 6/6/2016.
   */
+class Player() {
+  var name: String = "computer"
+  var isComp: Boolean = false
+  private var allSpots: List[Coord] = List()
+
+  def addSpot(spot: Coord): Unit = {
+    allSpots = allSpots :+ spot
+  }
+
+  def getSpots: List[Coord] =
+    allSpots
+}
 
 
 object Main extends App {
 
+  val playerOne = new Player()
+  val playerTwo = new Player()
 
-  var playerOneSpots: List[List[Int]] = List()
-  var playerTwoSpots: List[List[Int]] = List()
-
-
-  def emptySpot(attempt :List[Int]) : Boolean = {
-    !(playerOneSpots.contains(attempt) ||  playerTwoSpots.contains(attempt))
+  def emptySpot(attempt: Coord): Boolean = {
+    !(playerOne.getSpots.contains(attempt) || playerTwo.getSpots.contains(attempt))
   }
 
-  def printToConsole(): Unit = {
-    def OwnsSpot(l: List[Int]): String = {
-      if(playerOneSpots.contains(l))
+  def printBoardToConsole(): Unit = {
+
+    def spotSymbol(l: Coord): String = {
+      if (playerOne.getSpots.contains(l))
         "X"
-      else if(playerTwoSpots.contains(l))
+      else if (playerTwo.getSpots.contains(l))
         "O"
       else " "
     }
 
-    def makeLine(i: Int): String = {
-      if(i != 2) " | " else ""
-    }
+    for (x <- 0 to 2) {
+      for (y <- 0 to 2) {
+        val line: String = if (y != 2) " | " else ""
 
-    for(x <- 0 to 2) {
-      for(y <- 0 to 2) {
-        var line: String = if(y != 2) " | " else ""
-
-        print(" " + OwnsSpot(List(x, y)) + line)
+        print(" " + spotSymbol((x, y)) + line)
       }
       println()
 
-      if(x != 2)
+      if (x != 2)
         println("---|----|----")
     }
   }
 
-  def stopGame(player: List[List[Int]]): Boolean = {
-    for(i <- 0 to 2) {
-      if(player.contains(List(i,0)) && player.contains(List(i,1)) && player.contains(List(i,2))) {
-        println("winner !!")
-        printToConsole
-        return true
-      }
-    }
+  def stopGame(player: Player): Boolean = {
+    val spots = player.getSpots
 
-    for(i <- 0 to 2) {
-      if(player.contains(List(0,i)) && player.contains(List(1,i)) && player.contains(List(2,i))) {
-        println("winner !!")
-        printToConsole
-        return true
-      }
-    }
+    def isRowFilled(row: Int): Boolean =
+      (0 to 2).forall(col => spots.contains((row, col)))
 
-    if(player.contains(List(0,0)) && player.contains(List(1,1)) && player.contains(List(2,2))) {
-      println("winner !!")
-      printToConsole
-      return true
-    }
+    def isAnyRowFilled: Boolean =
+      (0 to 2).exists(isRowFilled) // or: (0 to 2).exists(i => isRowFilled(i)) or: (0 to 2) exists isRowFilled
 
-    if(player.contains(List(0,2)) && player.contains(List(1,1)) && player.contains(List(2,0))) {
-      println("winner !!")
-      printToConsole
-      return true
-    }
+    def isColumnFilled(col: Int): Boolean =
+      (0 to 2).forall(row => spots.contains((row, col)))
 
-    if(playerTwoSpots.length + playerOneSpots.length == 9){
+    def isAnyColumnFilled: Boolean =
+      (0 to 2).exists(isColumnFilled)
+
+    def isDiagonalFilled: Boolean =
+      (0 to 2).forall(a => spots.contains((a, a))) ||
+        (0 to 2).forall(a => spots.contains((a, 2 - a)))
+
+    def isTie: Boolean =
+      playerTwo.getSpots.length + playerOne.getSpots.length == 9
+
+
+    if (isAnyRowFilled || isAnyColumnFilled || isDiagonalFilled) {
+      println(player.name + " is a winner !!")
+      printBoardToConsole()
+      true
+    } else if (isTie) {
       println("no winner !!")
-      printToConsole
-      return true
-    }
-
-    false
+      printBoardToConsole()
+      true
+    } else
+      false
   }
 
-  def playerTurn() : List[Int] = {
-
+  def playerTurn(): Coord = {
     def rowSpot(): Int = {
-      var row = scala.io.StdIn.readInt()
+      val row = scala.io.StdIn.readInt()
       if (row < 3) row
       else {
         println("invalid spot, try again")
@@ -91,8 +100,8 @@ object Main extends App {
       }
     }
 
-    def columnSpot() : Int = {
-      var column = scala.io.StdIn.readInt()
+    def columnSpot(): Int = {
+      val column = scala.io.StdIn.readInt()
       if (column < 3) {
         column
       }
@@ -102,58 +111,86 @@ object Main extends App {
       }
     }
 
-    var row = rowSpot()
-    var col = columnSpot()
+    val row = rowSpot()
+    val col = columnSpot()
 
-    if(emptySpot(List(row,col))){
-      playerOneSpots = playerOneSpots :+ List(row, col)
-      List(row,col)
+    if (emptySpot((row, col))) {
+      (row, col)
     } else {
       println("spot taken, try again")
-      playerTurn
+      playerTurn()
     }
   }
 
-
-
-  def computersTurn() : List[Int] = {
-    var r = scala.util.Random
-    var col = r.nextInt(3)
-    var row = r.nextInt(3)
-
-    if(emptySpot(List(row,col))){
-      playerTwoSpots = playerTwoSpots :+ List(row, col)
-      List(col, row)
-    } else computersTurn
+  def secondPlayer(player: Player): Coord = {
+    if (player.isComp) {
+      computersTurn()
+    } else {
+      playerTurn()
+    }
   }
 
-  def playing() : Unit = {
-    printToConsole()
-    playerTurn()
-    if(!stopGame(playerOneSpots)) {
-      computersTurn()
-      if(!stopGame(playerTwoSpots)) {
+  def computersTurn(): Coord = {
+    val r = scala.util.Random
+    val col = r.nextInt(3)
+    val row = r.nextInt(3)
+
+    if (emptySpot((row, col))) {
+      (col, row)
+    } else computersTurn()
+  }
+
+  def introduction(): Unit = {
+
+    def enterName(player: Player): Unit = {
+      println("please enter your name")
+
+      def nameSetter(): Unit = {
+        val name = scala.io.StdIn.readLine()
+        if (name.length > 0) {
+          player.name = name
+        } else {
+          println("name must have at least one letter")
+          nameSetter()
+        }
+      }
+      nameSetter()
+      //val name = scala.io.StdIn.readLine()
+      // player.name = name
+    }
+
+    def pickNumOfPlayers(): Unit = {
+      println("one player or two players, please enter 1 or 2")
+      val numOfPlayers = scala.io.StdIn.readInt()
+
+      numOfPlayers match {
+        case 1 => playerTwo.isComp = true
+        case 2 =>
+          playerTwo.isComp = false
+          enterName(playerTwo)
+        case _ => pickNumOfPlayers()
+      }
+    }
+
+    enterName(playerOne)
+    pickNumOfPlayers()
+  }
+
+  def playing(): Unit = {
+    printBoardToConsole()
+    println(playerOne.name + ", please go")
+    playerOne.addSpot(playerTurn())
+
+    if (!stopGame(playerOne)) {
+      printBoardToConsole()
+      println(playerTwo.name + ", please go")
+      playerTwo.addSpot(secondPlayer(playerTwo))
+      if (!stopGame(playerTwo)) {
         playing()
       }
     }
   }
 
-
+  introduction()
   playing()
 }
-
-
-//temp printing spots
-/*for(i <- playerOneSpots) {
-  print("player one " + i(0) + ", " + i(1) + ".  ")
-}
-println()*/
-// end of printing
-
-
-//temp printing spots
-/*for(i <- playerTwoSpots) {
-  print("player two " + i(0) + ", " + i(1)+ ".  ")
-}
-println() */
-// end of printing
